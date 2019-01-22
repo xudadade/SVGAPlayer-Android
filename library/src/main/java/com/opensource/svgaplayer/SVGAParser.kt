@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.http.HttpResponseCache
 import android.os.Handler
 import android.util.Log
+import android.view.View.inflate
 import com.opensource.svgaplayer.proto.MovieEntity
 import org.json.JSONObject
 import java.io.*
@@ -33,7 +34,7 @@ class SVGAParser(private val context: Context) {
 
         var noCache = false
 
-        open fun resume(url: URL, complete: (inputStream: InputStream) -> Unit, failure: (e: Exception) -> Unit): () -> Unit {
+        open fun resume(url: URL, complete: (inputStream: InputStream) -> Unit, failure: (e: Throwable) -> Unit): () -> Unit {
             var cancelled = false
             val cancelBlock = {
                 cancelled = true
@@ -71,7 +72,7 @@ class SVGAParser(private val context: Context) {
                             }
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     e.printStackTrace()
                     failure(e)
                 }
@@ -94,8 +95,7 @@ class SVGAParser(private val context: Context) {
             context.assets.open(name)?.let {
                 this.decodeFromInputStream(it, buildCacheKey("file:///assets/$name"), callback, true)
             }
-        }
-        catch (e: java.lang.Exception) {
+        } catch (e: Throwable) {
             this.invokeErrorCallback(e, callback)
         }
     }
@@ -106,8 +106,7 @@ class SVGAParser(private val context: Context) {
                 this.decodeFromCacheKey(buildCacheKey(url), callback)
             }
             return null
-        }
-        else {
+        } else {
             return fileDownloader.resume(url, {
                 this.decodeFromInputStream(it, this.buildCacheKey(url), callback)
             }, {
@@ -127,17 +126,16 @@ class SVGAParser(private val context: Context) {
                             }
                         }
                         this.decodeFromCacheKey(cacheKey, callback)
-                    }
-                    else {
+                    } else {
                         inflate(bytes)?.let {
                             val videoItem = SVGAVideoEntity(MovieEntity.ADAPTER.decode(it), File(cacheKey))
 //                            videoItem.prepare {
-                                this.invokeCompleteCallback(videoItem, callback)
+                            this.invokeCompleteCallback(videoItem, callback)
 //                            }
                         }
                     }
                 }
-            } catch (e: java.lang.Exception) {
+            } catch (e: Throwable) {
                 this.invokeErrorCallback(e, callback)
             } finally {
                 if (closeInputStream) {
@@ -177,7 +175,7 @@ class SVGAParser(private val context: Context) {
         }
     }
 
-    private fun invokeErrorCallback(e: java.lang.Exception, callback: ParseCompletion) {
+    private fun invokeErrorCallback(e: Throwable, callback: ParseCompletion) {
         e.printStackTrace()
         Handler(context.mainLooper).post {
             callback.onError()
@@ -196,7 +194,7 @@ class SVGAParser(private val context: Context) {
                     FileInputStream(binaryFile).use {
                         this.invokeCompleteCallback(SVGAVideoEntity(MovieEntity.ADAPTER.decode(it), cacheDir), callback)
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     cacheDir.delete()
                     binaryFile.delete()
                     throw e
@@ -221,13 +219,13 @@ class SVGAParser(private val context: Context) {
                             }
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     cacheDir.delete()
                     jsonFile.delete()
                     throw e
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             this.invokeErrorCallback(e, callback)
         }
     }
@@ -254,8 +252,7 @@ class SVGAParser(private val context: Context) {
                 val count = inputStream.read(byteArray, 0, 2048)
                 if (count <= 0) {
                     break
-                }
-                else {
+                } else {
                     byteArrayOutputStream.write(byteArray, 0, count)
                 }
             }
@@ -272,8 +269,7 @@ class SVGAParser(private val context: Context) {
                 val count = inflater.inflate(inflatedBytes, 0, 2048)
                 if (count <= 0) {
                     break
-                }
-                else {
+                } else {
                     inflatedOutputStream.write(inflatedBytes, 0, count)
                 }
             }
